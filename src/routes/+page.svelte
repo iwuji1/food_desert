@@ -1,2 +1,11 @@
-<h1>Welcome to SvelteKit</h1>
-<p>Visit <a href="https://svelte.dev/docs/kit">svelte.dev/docs/kit</a> to read the documentation</p>
+<script>
+    import MAP from '$lib/components/map.svelte'
+</script>
+
+
+<h1>Food Deserts</h1>
+<p>We will Learn about good Deserts!!!</p>
+
+<MAP />
+
+
