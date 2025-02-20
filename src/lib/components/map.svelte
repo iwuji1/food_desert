@@ -3,14 +3,22 @@
     import mapboxgl from "mapbox-gl"
     import 'mapbox-gl/dist/mapbox-gl.css';
 
+    import * as d3 from 'd3'
+    import { scaleBand, scaleLinear } from "d3-scale";
+    import Tooltip from "$lib/components/map_tooltip.svelte";
+
     let map;
     let mapContainer;
     let lng, lat, zoom;
+    let pixelPerKm;
+    let hoverData;
+    let mapx;
+    let mapy;
 
     //London
     lng = -0.1276;
     lat = 51.5072;
-    zoom = 11;
+    zoom = 12;
 
     let markers = [];
     let locations = [];
@@ -20,21 +28,15 @@
     const MAPBOX_ACCESS_TOKEN = "pk.eyJ1Ijoib2Jpd3VqaSIsImEiOiJja3B3ZHdvenkwMHV4MnFucHc2YW9tcHcyIn0.wI9Kn7vACQdq61dnjStghg"
 
     // Define colors for each store type
-  const storeColors = {
-    "McDonald's": "#FF0000", // Red
-    "Morleys": "#FF4500", // Orange-Red
-    "Poundland": "#008000", // Green
-    "Waitrose": "#32CD32", // Lime Green
-    "Lidl": "#0000FF", // Blue
-    "Pret A Manger": "#800080" // Purple
-  };
+    const stores = ["McDonald's", "Morleys", "Poundland", "Waitrose", "Lidl", "Pret A Manger"];
+    $:cScale = d3.scaleOrdinal().domain(stores).range(["#CF240A","#e8dbcb", "#007E88", "#578626", "#015AA2", "#FEE44D"])
 
 
     async function loadData() {
     const response = await fetch("/london_food_desert_stores.json");
     locations = await response.json();
     console.log(locations);
-    loadmarks()
+    // loadmarks()
 }
 
 function loadmarks() {
@@ -59,7 +61,9 @@ function loadmarks() {
         container: mapContainer,
         accessToken: MAPBOX_ACCESS_TOKEN,
         center: [initialState.lng, initialState.lat],
-        zoom: initialState.zoom
+        zoom: initialState.zoom,
+        projection: 'equalEarth',
+        interactive: false
     });
 
     map.on('move', () => {
@@ -69,6 +73,17 @@ function loadmarks() {
     onDestroy(() => {
     map.remove();
   })
+
+  map.addControl(new mapboxgl.ScaleControl());
+
+  const scaleBar = document.querySelector(".mapboxgl-ctrl-scale");
+
+  if (scaleBar) {
+        const scaleDistanceKM = parseFloat(scaleBar.innerHTML);
+        const scaleWidthPx = scaleBar.clientWidth;
+
+        pixelPerKm = scaleWidthPx / scaleDistanceKM;
+    }
 
   });
 
@@ -110,10 +125,50 @@ function loadmarks() {
     cursor: pointer;
 }
 
+svg {
+    position: absolute;
+    z-index: 1;
+}
+
 
 </style>
 
 <div class="map" bind:this={mapContainer}></div>
+<svg width= "100%" height= "100%">
+    {#each locations as d}
+    {#if map}
+    <circle 
+    class="store-radius"
+    id = "radius"
+    cx={map.project(new mapboxgl.LngLat(d.Longitude, d.Latitude)).x}
+    cy={map.project(new mapboxgl.LngLat(d.Longitude, d.Latitude)).y}
+    r={pixelPerKm*3}
+    fill = {cScale(d.Store)}
+    opacity = "0.2"
+    />
+    {/if}
+{/each}
+    {#each locations as d}
+        {#if map}
+        <circle 
+        class="map-dots"
+        id = {d.Store}
+        cx={map.project(new mapboxgl.LngLat(d.Longitude, d.Latitude)).x}
+        cy={map.project(new mapboxgl.LngLat(d.Longitude, d.Latitude)).y}
+        r="5"
+        fill = {cScale(d.Store)}
+        onmouseover ={() => {
+            hoverData = d
+            mapx = map.project(new mapboxgl.LngLat(d.Longitude, d.Latitude)).x
+            mapy = map.project(new mapboxgl.LngLat(d.Longitude, d.Latitude)).y
+            }}
+        />
+        {/if}
+    {/each}
+</svg>
+{#if hoverData}
+    <Tooltip data={hoverData} {mapx} {mapy}/>
+{/if}
 
 <div class="sidebar">
     Longitude: {lng.toFixed(4)} | Latitude: {lat.toFixed(4)} | Zoom:{zoom.toFixed(2)}
