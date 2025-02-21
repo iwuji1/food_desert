@@ -14,11 +14,14 @@
     let hoverData;
     let mapx;
     let mapy;
+    let drawCircles = false;
+    let drawRadius = false;
+    let drawShapes = false;
 
     //London
     lng = -0.1276;
     lat = 51.5072;
-    zoom = 12;
+    zoom = 11;
 
     let markers = [];
     let locations = [];
@@ -36,15 +39,6 @@
     const response = await fetch("/london_food_desert_stores.json");
     locations = await response.json();
     console.log(locations);
-    // loadmarks()
-}
-
-function loadmarks() {
-    locations.forEach((item) => {
-
-        const marker = new mapboxgl.Marker().setLngLat({lng: item.Longitude, lat: item.Latitude}).addTo(map);
-        markers.push(marker)
-    });
 }
 
   function updateData() {
@@ -60,9 +54,9 @@ function loadmarks() {
     map = new mapboxgl.Map({
         container: mapContainer,
         accessToken: MAPBOX_ACCESS_TOKEN,
-        center: [initialState.lng, initialState.lat],
-        zoom: initialState.zoom,
-        projection: 'equalEarth',
+        style: 'mapbox://styles/mapbox/light-v11', // style URL
+        zoom: 2,
+        projection: 'mercator',
         interactive: false
     });
 
@@ -87,13 +81,45 @@ function loadmarks() {
 
   });
 
-  function handleReset() {
+  export function flyToLondon() {
+    drawCircles = false;
+    drawRadius = false;
+    drawShapes = false;
     map.flyTo({
-      center: [initialState.lng, initialState.lat],
-      zoom: initialState.zoom,
-      essential: true
-    });
+        center: [initialState.lng, initialState.lat],
+        zoom: initialState.zoom,
+        essential: true
+    })
   }
+
+  export function flyOut() {
+    drawCircles = false;
+    drawRadius = false;
+    drawShapes = false;
+    map.flyTo({
+        center: [0,0],
+        zoom:2,
+        essential: true
+    })
+  }
+
+  export function plotPoints() {
+    drawRadius = false;
+    drawShapes = false;
+    drawCircles = true;
+  }
+
+  export function plotRadius() {
+    drawShapes = false;
+    drawRadius = true;
+  }
+
+  export function plotShapes() {
+    drawCircles = false;
+    drawRadius = false;
+    drawShapes = true;
+  }
+
 </script>
 
 <style>
@@ -102,28 +128,7 @@ function loadmarks() {
         width: 100%;
         height: 100vh;
     }
-    .sidebar {
-      background-color: rgb(35 55 75 / 90%);
-      color: #fff;
-      padding: 6px 12px;
-      font-family: monospace;
-      z-index: 1;
-      position: absolute;
-      top: 12%;
-      left: 0;
-      margin: 12px;
-      border-radius: 4px;
-    }
-    
-    .reset-button {
-    position: absolute;
-    top: 13.5%;
-    z-index: 1;
-    left: 25%;
-    padding: 4px 10px;
-    border-radius: 10px;
-    cursor: pointer;
-}
+
 
 svg {
     position: absolute;
@@ -133,10 +138,11 @@ svg {
 
 </style>
 
-<div class="map" bind:this={mapContainer}></div>
+<div class="map" bind:this={mapContainer} onmouseleave={() => {hoverData = null;}}>
 <svg width= "100%" height= "100%">
     {#each locations as d}
     {#if map}
+    {#if drawRadius}
     <circle 
     class="store-radius"
     id = "radius"
@@ -147,9 +153,11 @@ svg {
     opacity = "0.2"
     />
     {/if}
+    {/if}
 {/each}
     {#each locations as d}
         {#if map}
+        {#if drawCircles}
         <circle 
         class="map-dots"
         id = {d.Store}
@@ -162,7 +170,11 @@ svg {
             mapx = map.project(new mapboxgl.LngLat(d.Longitude, d.Latitude)).x
             mapy = map.project(new mapboxgl.LngLat(d.Longitude, d.Latitude)).y
             }}
+        onfocus = {() => hoverData = d}
+        onmouseleave = {() => hoverData = null}
+            tabindex="0"
         />
+        {/if}
         {/if}
     {/each}
 </svg>
@@ -170,8 +182,4 @@ svg {
     <Tooltip data={hoverData} {mapx} {mapy}/>
 {/if}
 
-<div class="sidebar">
-    Longitude: {lng.toFixed(4)} | Latitude: {lat.toFixed(4)} | Zoom:{zoom.toFixed(2)}
 </div>
-
-<button onclick={handleReset} class="reset-button">Reset</button>

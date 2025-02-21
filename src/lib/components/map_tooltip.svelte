@@ -10,7 +10,7 @@
     let tooltipWidth;
 
     const xNudge = 2;
-    const yNudge = 60;
+    const yNudge = 2;
 
     $: xPosition = mapx + tooltipWidth + xNudge > width ? mapx - tooltipWidth - xNudge : mapx + xNudge;
     $: yPosition = mapy + yNudge
